@@ -1,0 +1,155 @@
+#Este playbook roda no ubuntu-18.04
+- hosts: blogvm
+  tasks:
+
+    - name: 'Atualizando pacotes'
+      shell: 'sudo apt-get update'
+
+    - name: 'Instalando pacotes'
+      apt:
+        name: "{{ item }}"
+        state: latest
+      become: yes
+      with_items:
+        - nginx
+        - php7.2-fpm
+        - php7.2
+        - libapache2-mod-php7.2
+        - php7.2-gd
+        - php-ssh2
+        - php7.2-mysql
+        - python3
+
+    - name: "Habilitar aplicação do Nginx"
+      shell: ufw allow 'Nginx FULL'
+      become: yes
+    
+    - name: "Definindo IP publico"
+      shell: ip addr show eth0 | grep inet | awk '{ print $2; }' | sed 's/\/.*$//'
+      
+
+    - name: "Verificar se o IP está visivel na web"
+      shell: curl -4 icanhazip.com
+
+    - name: "Criando pasta do Blog"
+      shell: mkdir /var/www/blog
+      become: yes
+      
+    - name: "Configurando permissão na pasta blog"
+      shell: chown -R $USER:$USER /var/www/blog
+      become: yes  
+
+    - name: 'Copia configuração de blog.nginx'
+      copy:
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/blog'
+        dest: '/etc/nginx/sites-available/blog'
+      become: yes
+
+    - name: "Ativa o site"
+      shell: ln -s /etc/nginx/sites-available/blog /etc/nginx/sites-enabled
+      become: yes
+
+    - name: "Desvincula o site default"
+      shell: unlink /etc/nginx/sites-enabled/default
+      become: yes
+
+    - name: "Mantém configuração após reload do nginx"
+      shell: nginx -t
+      become: yes
+
+    - name: "Reinicia o NGINX"
+      shell: systemctl reload nginx
+      become: yes
+
+    - name: 'Copia index.html para nginx exibir'
+      copy:
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/index.html'
+        dest: '/var/www/blog/index.html'
+      become: yes  
+
+    - name: 'Cria página de teste do php'
+      copy:
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/info.php'
+        dest: '/var/www/blog/info.php'
+      become: yes  
+
+    - name: 'Baixando o Wordpress'
+      get_url:
+        url: 'http://wordpress.org/latest.tar.gz'
+        dest: '/tmp/wordpress.tar.gz'
+
+    - name: 'Descompactando Wordpress'
+      unarchive:
+        src: '/tmp/wordpress.tar.gz'
+        dest: /var/www/
+        remote_src: yes
+      become: yes
+
+    - copy:
+        src: '/var/www/wordpress/wp-config-sample.php'
+        dest: '/var/www/wordpress/wp-config.php'
+        remote_src: yes
+      become: yes
+
+    - name: 'Configurando o wp-config com as entradas do mysql'
+      replace:
+        path: '/var/www/wordpress/wp-config.php'
+        regexp: "{{ item.regex }}"
+        replace: "{{ item.value }}"
+      with_items:
+        - { regex: 'database_name_here', value: 'wordpress'}
+        - { regex: 'username_here', value: 'wordpress'}
+        - { regex: 'password_here', value: 'wordpress'}
+        - { regex: 'localhost', value: '172.17.177.46'} #ip do mysql server
+      become: yes    
+
+- hosts: databasevm
+  handlers:
+    - name: restart mysql
+      service:
+        name: mysql
+        state: restarted
+      become: yes
+
+  tasks:
+
+    - name: 'Atualizando pacotes'
+      shell: 'sudo apt-get update'
+
+    - name: 'Instalando pacotes'
+      apt:
+        name: "{{ item }}"
+        state: latest
+      become: yes
+      with_items: 
+        - mysql-server-5.7
+        - python3-mysqldb
+
+    - name: 'Criando o Banco de dados'
+      mysql_db:
+        name: wordpress
+        #login_user: root
+        state: present
+      become: yes
+
+    - name: 'Criando usuario de MySQL'
+      mysql_user:
+        login_user: root
+        name: wordpress
+        password: wordpress
+        priv: 'wordpress.*:ALL'
+        state: present
+        host: "{{ item }}"
+      become: yes
+      with_items:
+        - 'localhost'
+        - '127.0.0.1'
+        - '172.17.177.45' #ip do wordpress server
+
+    - name: 'Configurando mysql para aceitar conexão remota'
+      copy:
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/mysqld.cnf'
+        dest: '/etc/mysql/mysql.conf.d/mysqld.cnf' #alterar o bind-address para 0.0.0.0
+      become: yes
+      notify:
+        - restart mysql
