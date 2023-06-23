@@ -36,10 +36,6 @@
         path: /var/www/blog
         state: directory
       become: yes  
-
-    #- name: "Criando pasta do Blog"
-    #  shell: mkdir /var/www/blog
-    #  become: yes
       
     - name: "Configurando permissão na pasta blog"
       shell: chown -R $USER:$USER /var/www/blog
@@ -58,19 +54,11 @@
         state: hard
       become: yes  
 
-    #- name: "Ativa o site"
-    #  shell: ln -s /etc/nginx/sites-available/blog /etc/nginx/sites-enabled
-    #  become: yes
-
     - name: "Desvincula o site default"
       file:
         path: "/etc/nginx/sites-enabled/default"
         state: absent
-      become: yes  
-
-    #- name: "Desvincula o site default"
-    #  shell: unlink /etc/nginx/sites-enabled/default
-    #  become: yes
+      become: yes 
 
     - name: "Mantém configuração após reload do nginx"
       shell: nginx -t
