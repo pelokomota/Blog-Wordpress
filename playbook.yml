@@ -31,27 +31,46 @@
     - name: "Verificar se o IP está visivel na web"
       shell: curl -4 icanhazip.com
 
-    - name: "Criando pasta do Blog"
-      shell: mkdir /var/www/blog
-      become: yes
+    - name: 'Criando diretorio blog'
+      file:
+        path: /var/www/blog
+        state: directory
+      become: yes  
+
+    #- name: "Criando pasta do Blog"
+    #  shell: mkdir /var/www/blog
+    #  become: yes
       
     - name: "Configurando permissão na pasta blog"
       shell: chown -R $USER:$USER /var/www/blog
       become: yes  
 
-    - name: 'Copia configuração de blog.nginx'
+    - name: "Copia configuração de blog.nginx"
       copy:
         src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/blog'
         dest: '/etc/nginx/sites-available/blog'
       become: yes
 
-    - name: "Ativa o site"
-      shell: ln -s /etc/nginx/sites-available/blog /etc/nginx/sites-enabled
-      become: yes
+    - name: "Ativa o site" 
+      file:
+        src: "/etc/nginx/sites-available/blog"
+        dest: "/etc/nginx/sites-enabled"
+        state: hard
+      become: yes  
+
+    #- name: "Ativa o site"
+    #  shell: ln -s /etc/nginx/sites-available/blog /etc/nginx/sites-enabled
+    #  become: yes
 
     - name: "Desvincula o site default"
-      shell: unlink /etc/nginx/sites-enabled/default
-      become: yes
+      file:
+        path: "/etc/nginx/sites-enabled/default"
+        state: absent
+      become: yes  
+
+    #- name: "Desvincula o site default"
+    #  shell: unlink /etc/nginx/sites-enabled/default
+    #  become: yes
 
     - name: "Mantém configuração após reload do nginx"
       shell: nginx -t
@@ -86,21 +105,21 @@
       become: yes
 
     - copy:
-        src: '/var/www/wordpress/wp-config-sample.php'
-        dest: '/var/www/wordpress/wp-config.php'
+        src: "{{ wp_installation_dir }}/wp-config-sample.php"
+        dest: "{{ wp_installation_dir }}/wp-config.php"
         remote_src: yes
       become: yes
 
     - name: 'Configurando o wp-config com as entradas do mysql'
       replace:
-        path: '/var/www/wordpress/wp-config.php'
+        path: "{{ wp_installation_dir }}/wp-config.php"
         regexp: "{{ item.regex }}"
         replace: "{{ item.value }}"
       with_items:
-        - { regex: 'database_name_here', value: 'wordpress'}
-        - { regex: 'username_here', value: 'wordpress'}
-        - { regex: 'password_here', value: 'wordpress'}
-        - { regex: 'localhost', value: '172.17.177.46'} #ip do mysql server
+        - { regex: 'database_name_here', value: "{{ wp_db_name }}" }
+        - { regex: 'username_here', value: "{{ wp_username }}" }
+        - { regex: 'password_here', value: "{{ wp_user_password }}" }
+        - { regex: 'localhost', value: "{{ wp_db_ip }}" } #ip do mysql server
       become: yes    
 
 - hosts: databasevm
@@ -127,7 +146,7 @@
 
     - name: 'Criando o Banco de dados'
       mysql_db:
-        name: wordpress
+        name: "{{ wp_db_name }}"
         #login_user: root
         state: present
       become: yes
@@ -135,16 +154,16 @@
     - name: 'Criando usuario de MySQL'
       mysql_user:
         login_user: root
-        name: wordpress
-        password: wordpress
-        priv: 'wordpress.*:ALL'
+        name: "{{ wp_username }}"
+        password: "{{ wp_user_password }}"
+        priv: "{{ wp_db_name }}.*:ALL"
         state: present
         host: "{{ item }}"
       become: yes
       with_items:
         - 'localhost'
         - '127.0.0.1'
-        - '172.17.177.45' #ip do wordpress server
+        - "{{ wp_host_ip }}" #ip do wordpress server
 
     - name: 'Configurando mysql para aceitar conexão remota'
       copy:
