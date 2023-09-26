@@ -42,8 +42,8 @@
       become: yes  
 
     - name: "Copia configuração de blog.nginx"
-      copy:
-        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/files/blog'
+      template:
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/templates/blog.j2'
         dest: '/etc/nginx/sites-available/blog'
       become: yes
 
@@ -154,9 +154,10 @@
         - "{{ wp_host_ip }}" #ip do wordpress server
 
     - name: 'Configurando mysql para aceitar conexão remota'
-      copy:
-        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/files/mysqld.cnf'
+      template:
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/templates/mysqld.cnf.j2'
         dest: '/etc/mysql/mysql.conf.d/mysqld.cnf' #alterar o bind-address para 0.0.0.0
       become: yes
       notify:
         - restart mysql
+      
