@@ -43,7 +43,7 @@
 
     - name: "Copia configuração de blog.nginx"
       copy:
-        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/blog'
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/files/blog'
         dest: '/etc/nginx/sites-available/blog'
       become: yes
 
@@ -70,13 +70,13 @@
 
     - name: 'Copia index.html para nginx exibir'
       copy:
-        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/index.html'
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/files/index.html'
         dest: '/var/www/blog/index.html'
       become: yes  
 
     - name: 'Cria página de teste do php'
       copy:
-        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/info.php'
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/files/info.php'
         dest: '/var/www/blog/info.php'
       become: yes  
 
@@ -155,7 +155,7 @@
 
     - name: 'Configurando mysql para aceitar conexão remota'
       copy:
-        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/mysqld.cnf'
+        src: '/Users/bmota/Desktop/DevOps/Blog-Wordpress/files/mysqld.cnf'
         dest: '/etc/mysql/mysql.conf.d/mysqld.cnf' #alterar o bind-address para 0.0.0.0
       become: yes
       notify:
