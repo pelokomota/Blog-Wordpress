@@ -1,18 +1,15 @@
 ---
-- name: 'Atualizando pacotes'
-  shell: 'sudo apt-get update'
-
 - name: 'Instalando pacotes'
-  apt:
-    name: "{{ item }}"
-    state: latest
-  become: yes
-  with_items:
+  ansible.builtin.apt:
+    pkg:
     - nginx
-    - php7.2-fpm
-    - php7.2
-    - libapache2-mod-php7.2
-    - php7.2-gd
+    - php-fpm
+    - php
+    - libapache2-mod-php
+    - php-gd
     - php-ssh2
-    - php7.2-mysql
-    - python3 
+    - php-mysql
+    - python3
+    state: latest
+    update_cache: yes
+  become: yes
